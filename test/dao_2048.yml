@@ -1,0 +1,9 @@
+name: dao-2048-test
+kind: deploy
+predicate:
+  repository: ghcr.io/daocloud/dao-2048
+priority:
+  tag: 1.1.0-alpha.6
+requirement:
+  publish_list:
+    - 8080:80
