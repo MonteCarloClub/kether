@@ -19,3 +19,6 @@ vendor/
 
 # OSX trash
 .DS_Store
+
+# Product
+main
