@@ -21,6 +21,15 @@ THE SOFTWARE.
 */
 package object
 
+import (
+	"fmt"
+
+	"github.com/MonteCarloClub/kether/machine"
+	"github.com/docker/docker/api/types/container"
+	"github.com/docker/go-connections/nat"
+	"github.com/sirupsen/logrus"
+)
+
 type ResourceDescriptionEntity struct {
 	DockerImageRepository string `yaml:"repository"`
 	DockerImageTag        string `yaml:"tag"`
@@ -56,8 +65,10 @@ type KetherObject struct {
 type KetherObjectStateType int8
 
 const (
-	UNREGISTERED KetherObjectStateType = 0
-	REGISTERED   KetherObjectStateType = 1
+	FAIL_TO_DEPLOY KetherObjectStateType = -2
+	UNREGISTERED   KetherObjectStateType = 0
+	REGISTERED     KetherObjectStateType = 1
+	DEPLOYED       KetherObjectStateType = 2
 	// TODO 新增后缀状态，包含状态转换中、成功和失败，建议成功和失败的状态值互为相反数
 )
 
@@ -89,6 +100,46 @@ func (ketherObjectEntity *KetherObjectEntity) GetKetherObjectState() *KetherObje
 	return &KetherObjectState{
 		Name: ketherObjectEntity.Name,
 	}
+}
+
+func (ketherObject *KetherObject) GetImageName() string {
+	repository, tag := ketherObject.Predicate.DockerImageRepository, ketherObject.Predicate.DockerImageTag
+	if repository == "" {
+		repository = ketherObject.Priority.DockerImageRepository
+	}
+	if tag == "" {
+		tag = ketherObject.Priority.DockerImageTag
+	}
+	return fmt.Sprintf("%v:%v", repository, tag)
+}
+
+func (ketherObject *KetherObject) GetContainerConfig() (*container.Config, *container.HostConfig) {
+	hostPort, containerPort := ketherObject.Requirement.HostPort, ketherObject.Requirement.ContainerPort
+	if containerPort == "" {
+		logrus.Infof("no exposed port")
+		return nil, nil
+	}
+	if !machine.CheckIfHostPortAvailable(hostPort) {
+		hostPort = machine.GetAvailableHostPort()
+		logrus.Infof("no available host port specified, mapped to %v", hostPort)
+	}
+
+	containerConfig := &container.Config{
+		Image: ketherObject.GetImageName(),
+		ExposedPorts: nat.PortSet{
+			nat.Port(containerPort): struct{}{},
+		},
+	}
+	hostConfig := &container.HostConfig{
+		PortBindings: nat.PortMap{
+			nat.Port(containerPort): []nat.PortBinding{
+				{
+					HostPort: hostPort,
+				},
+			},
+		},
+	}
+	return containerConfig, hostConfig
 }
 
 func (ketherObjectState *KetherObjectState) SetState(state KetherObjectStateType) {

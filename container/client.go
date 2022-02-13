@@ -19,31 +19,24 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
-package object
+package container
 
 import (
-	"fmt"
-
+	"github.com/docker/docker/client"
 	"github.com/sirupsen/logrus"
 )
 
-func Register(dryRun bool, yamlPath string) (*KetherObject, *KetherObjectState, error) {
+var (
+	DockerApiClient *client.Client
+)
+
+func InitDockerApiClient() error {
 	var err error
-	ketherObject, ketherObjectState, err := ParseYaml(yamlPath)
-	if ketherObject == nil {
-		logrus.Errorf("fail to get kether object from yaml file, yamlPath: %v", yamlPath)
-		err = fmt.Errorf("empty ketherObject")
-	}
-	if ketherObjectState == nil {
-		logrus.Errorf("fail to get kether object state from yaml file, yamlPath: %v", yamlPath)
-		err = fmt.Errorf("empty ketherObjectState")
-	}
+	DockerApiClient, err = client.NewClientWithOpts()
 	if err != nil {
-		logrus.Errorf("fail to parse yaml file, err: %v", err)
+		logrus.Errorf("fail to init docker api client, err: %v", err)
+		return err
 	}
-	if dryRun {
-		logrus.Infof("registering kether object in dry run mode will not change any state")
-	}
-	// TODO 根据 ketherObject 部署服务，根据 ketherObjectState 注册服务状态
-	return ketherObject, ketherObjectState, err
+	logrus.Infof("docker api client inited")
+	return nil
 }

@@ -23,6 +23,7 @@ package cmd
 
 import (
 	"github.com/MonteCarloClub/kether/object"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
@@ -41,7 +42,20 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 		Run: func(cmd *cobra.Command, args []string) {
-			object.Register(dryRun, yamlPath)
+			// TODO 在 ctx 透传 dryRun
+			ketherObject, ketherObjectState, err := object.Register(dryRun, yamlPath)
+			if err != nil {
+				logrus.Errorf("fail to register kether object, err: %v", err)
+				return
+			}
+			logrus.Infof("kether object registered")
+
+			err = object.Deploy(ketherObject, ketherObjectState)
+			if err != nil {
+				logrus.Errorf("fail to deploy ketherObject, err: %v", err)
+				return
+			}
+			logrus.Infof("kether object deployed")
 		},
 	}
 )

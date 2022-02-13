@@ -29,7 +29,7 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-func ParseYaml(yamlPath string) (*KetherObject, *KetherObjectState) {
+func ParseYaml(yamlPath string) (*KetherObject, *KetherObjectState, error) {
 	ext := filepath.Ext(yamlPath)
 	if ext != ".yaml" && ext != ".yml" {
 		logrus.Warnf("%v may not be a legal yaml file", yamlPath)
@@ -38,18 +38,18 @@ func ParseYaml(yamlPath string) (*KetherObject, *KetherObjectState) {
 	yamlBytes, err := ioutil.ReadFile(yamlPath)
 	if err != nil {
 		logrus.Errorf("fail to read yaml file, yamlPath: %v, err: %v", yamlPath, err)
-		return nil, nil
+		return nil, nil, err
 	}
 
 	ketherObjectEntity := &KetherObjectEntity{}
 	err = yaml.Unmarshal(yamlBytes, &ketherObjectEntity)
 	if err != nil {
 		logrus.Errorf("fail to unmarshal yaml, yamlBytes: %v, err: %v", string(yamlBytes), err)
-		return nil, nil
+		return nil, nil, err
 	}
 
 	ketherObject := ketherObjectEntity.GetKetherObject()
 	ketherObjectState := ketherObjectEntity.GetKetherObjectState()
 	ketherObjectState.SetState(REGISTERED)
-	return ketherObject, ketherObjectState
+	return ketherObject, ketherObjectState, nil
 }

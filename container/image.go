@@ -19,31 +19,29 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
-package object
+package container
 
 import (
+	"context"
 	"fmt"
+	"io"
+	"os"
 
+	"github.com/docker/docker/api/types"
 	"github.com/sirupsen/logrus"
 )
 
-func Register(dryRun bool, yamlPath string) (*KetherObject, *KetherObjectState, error) {
-	var err error
-	ketherObject, ketherObjectState, err := ParseYaml(yamlPath)
-	if ketherObject == nil {
-		logrus.Errorf("fail to get kether object from yaml file, yamlPath: %v", yamlPath)
-		err = fmt.Errorf("empty ketherObject")
+func PullDockerImage(ctx context.Context, imageName string) error {
+	if imageName == "" {
+		logrus.Errorf("empty image name")
+		return fmt.Errorf("empty image name")
 	}
-	if ketherObjectState == nil {
-		logrus.Errorf("fail to get kether object state from yaml file, yamlPath: %v", yamlPath)
-		err = fmt.Errorf("empty ketherObjectState")
-	}
+	readCloser, err := DockerApiClient.ImagePull(ctx, imageName, types.ImagePullOptions{})
+	io.Copy(os.Stdout, readCloser)
 	if err != nil {
-		logrus.Errorf("fail to parse yaml file, err: %v", err)
+		logrus.Errorf("fail to pull docker image, refStr: %v, err: %v", imageName, err)
+		return err
 	}
-	if dryRun {
-		logrus.Infof("registering kether object in dry run mode will not change any state")
-	}
-	// TODO 根据 ketherObject 部署服务，根据 ketherObjectState 注册服务状态
-	return ketherObject, ketherObjectState, err
+	logrus.Infof("docker image pulled, refStr: %v", imageName)
+	return nil
 }
