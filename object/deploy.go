@@ -26,51 +26,44 @@ import (
 	"fmt"
 
 	"github.com/MonteCarloClub/kether/container"
-	"github.com/sirupsen/logrus"
+	"github.com/MonteCarloClub/kether/log"
 )
 
 func Deploy(ketherObject *KetherObject, ketherObjectState *KetherObjectState) error {
 	// TODO ctx 应该是单子，定义在 main
 	ctx := context.Background()
-	// TODO InitDockerApiClient 应该在 main 被调用
-	err := container.InitDockerApiClient()
-	if err != nil {
-		ketherObjectState.SetState(FAIL_TO_DEPLOY)
-		logrus.Errorf("fail to init docker api client, err: %v", err)
-		return err
-	}
-	logrus.Infof("docker api client inited")
 
 	imageName := ketherObject.GetImageName()
-	err = container.PullDockerImage(ctx, imageName)
+	err := container.PullDockerImage(ctx, imageName)
 	if err != nil {
 		ketherObjectState.SetState(FAIL_TO_DEPLOY)
-		logrus.Errorf("fail to pull docker image, imageName: %v,err: %v", imageName, err)
+		log.Error("fail to pull docker image", "imageName", imageName, "err", err)
 		return err
 	}
-	logrus.Infof("docker image pulled")
+	log.Info("docker image pulled")
 
 	containerConfig, hostConfig := ketherObject.GetContainerConfig()
 	id, err := container.CreateDockerContainer(ctx, containerConfig, hostConfig)
 	if id == "" {
 		ketherObjectState.SetState(FAIL_TO_DEPLOY)
-		logrus.Errorf("fail to create docker container, empty id")
-		return fmt.Errorf("empty container id")
+		err = fmt.Errorf("empty container id")
+		log.Error("fail to create docker container, empty id", "err", err)
+		return err
 	}
 	if err != nil {
 		ketherObjectState.SetState(FAIL_TO_DEPLOY)
-		logrus.Errorf("fail to create docker container, err: %v", err)
+		log.Error("fail to create docker container", "id", id, "err", err)
 		return err
 	}
-	logrus.Infof("container created")
+	log.Info("container created")
 
 	err = container.RunDockerContainer(ctx, id)
 	if err != nil {
 		ketherObjectState.SetState(FAIL_TO_DEPLOY)
-		logrus.Errorf("fail to run docker container, err: %v", err)
+		log.Error("fail to run docker container", "err", err)
 		return err
 	}
 	ketherObjectState.SetState(DEPLOYED)
-	logrus.Infof("container run")
+	log.Info("container run")
 	return nil
 }

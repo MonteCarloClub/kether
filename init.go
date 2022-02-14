@@ -19,24 +19,21 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
-package container
+package main
 
 import (
+	"github.com/MonteCarloClub/kether/container"
 	"github.com/MonteCarloClub/kether/log"
-	"github.com/docker/docker/client"
 )
 
-var (
-	DockerApiClient *client.Client
-)
+func init() {
+	log.InitLogger()
+	log.Info("logger inited")
 
-func InitDockerApiClient() error {
-	var err error
-	DockerApiClient, err = client.NewClientWithOpts()
+	err := container.InitDockerApiClient()
 	if err != nil {
 		log.Error("fail to init docker api client", "err", err)
-		return err
+		return
 	}
 	log.Info("docker api client inited")
-	return nil
 }

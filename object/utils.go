@@ -24,10 +24,10 @@ package object
 import (
 	"fmt"
 
+	"github.com/MonteCarloClub/kether/log"
 	"github.com/MonteCarloClub/kether/machine"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/go-connections/nat"
-	"github.com/sirupsen/logrus"
 )
 
 type ResourceDescriptionEntity struct {
@@ -110,18 +110,26 @@ func (ketherObject *KetherObject) GetImageName() string {
 	if tag == "" {
 		tag = ketherObject.Priority.DockerImageTag
 	}
+
+	if repository == "" {
+		log.Error("empty image name", "err", fmt.Errorf("empty repository"))
+		return ""
+	}
+	if tag == "" {
+		return repository
+	}
 	return fmt.Sprintf("%v:%v", repository, tag)
 }
 
 func (ketherObject *KetherObject) GetContainerConfig() (*container.Config, *container.HostConfig) {
 	hostPort, containerPort := ketherObject.Requirement.HostPort, ketherObject.Requirement.ContainerPort
 	if containerPort == "" {
-		logrus.Infof("no exposed port")
+		log.Info("no exposed port")
 		return nil, nil
 	}
 	if !machine.CheckIfHostPortAvailable(hostPort) {
 		hostPort = machine.GetAvailableHostPort()
-		logrus.Infof("no available host port specified, mapped to %v", hostPort)
+		log.Info("no available host port specified", "mapped host port", hostPort)
 	}
 
 	containerConfig := &container.Config{

@@ -24,38 +24,38 @@ package container
 import (
 	"context"
 
+	"github.com/MonteCarloClub/kether/log"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
-	"github.com/sirupsen/logrus"
 )
 
 func CreateDockerContainer(ctx context.Context, containerConfig *container.Config, hostConfig *container.HostConfig) (string, error) {
 	containerCreateCreatedBody, err := DockerApiClient.ContainerCreate(ctx, containerConfig, hostConfig, nil, nil, "")
 	if len(containerCreateCreatedBody.Warnings) > 0 {
-		logrus.Warnf("warning(s): %v", containerCreateCreatedBody.Warnings)
+		log.Warn("ContainerCreate returned warning(s)", "warning", containerCreateCreatedBody.Warnings)
 	}
 	if err != nil {
-		logrus.Errorf("fail to create container, err: %v", err)
+		log.Error("fail to create container", "err", err)
 		return "", err
 	}
-	logrus.Infof("container created, id: %v", containerCreateCreatedBody.ID)
+	log.Info("container created", "id", containerCreateCreatedBody.ID)
 	return containerCreateCreatedBody.ID, nil
 }
 
 func RunDockerContainer(ctx context.Context, id string) error {
 	err := DockerApiClient.ContainerStart(ctx, id, types.ContainerStartOptions{})
 	if err != nil {
-		logrus.Errorf("fail to start container, id: %v, err: %v", id, err)
+		log.Error("fail to start container", "id", id, "err", err)
 		return err
 	}
-	logrus.Infof("container started, id: %v", id)
+	log.Info("container started", "id", id)
 
 	containerWaitOKBodyChan, errChan := DockerApiClient.ContainerWait(ctx, id, container.WaitConditionNotRunning)
 	select {
 	case <-containerWaitOKBodyChan:
-		logrus.Infof("container not running, id: %v", id)
+		log.Info("container not running", "id", id)
 	case err := <-errChan:
-		logrus.Errorf("error encountered while container running, id: %v, err: %v", id, err)
+		log.Error("error encountered while container running", "id", id, "err", err)
 		return err
 	}
 	return nil

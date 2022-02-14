@@ -24,25 +24,23 @@ package object
 import (
 	"fmt"
 
-	"github.com/sirupsen/logrus"
+	"github.com/MonteCarloClub/kether/log"
 )
 
 func Register(dryRun bool, yamlPath string) (*KetherObject, *KetherObjectState, error) {
 	var err error
 	ketherObject, ketherObjectState, err := ParseYaml(yamlPath)
 	if ketherObject == nil {
-		logrus.Errorf("fail to get kether object from yaml file, yamlPath: %v", yamlPath)
+		log.Error("fail to get kether object from yaml file", "yamlPath", yamlPath)
 		err = fmt.Errorf("empty ketherObject")
-	}
-	if ketherObjectState == nil {
-		logrus.Errorf("fail to get kether object state from yaml file, yamlPath: %v", yamlPath)
+	} else if ketherObjectState == nil {
+		log.Error("fail to get kether object state from yaml file", "yamlPath", yamlPath)
 		err = fmt.Errorf("empty ketherObjectState")
-	}
-	if err != nil {
-		logrus.Errorf("fail to parse yaml file, err: %v", err)
+	} else if err != nil {
+		log.Error("fail to parse yaml file", "err", err)
 	}
 	if dryRun {
-		logrus.Infof("registering kether object in dry run mode will not change any state")
+		log.Info("registering kether object in dry run mode will not change any state")
 	}
 	// TODO 根据 ketherObject 部署服务，根据 ketherObjectState 注册服务状态
 	return ketherObject, ketherObjectState, err

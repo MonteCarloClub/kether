@@ -22,8 +22,8 @@ THE SOFTWARE.
 package cmd
 
 import (
+	"github.com/MonteCarloClub/kether/log"
 	"github.com/MonteCarloClub/kether/object"
-	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
@@ -45,17 +45,17 @@ to quickly create a Cobra application.`,
 			// TODO 在 ctx 透传 dryRun
 			ketherObject, ketherObjectState, err := object.Register(dryRun, yamlPath)
 			if err != nil {
-				logrus.Errorf("fail to register kether object, err: %v", err)
+				log.Error("fail to register kether object", "err", err)
 				return
 			}
-			logrus.Infof("kether object registered")
+			log.Info("kether object registered")
 
 			err = object.Deploy(ketherObject, ketherObjectState)
 			if err != nil {
-				logrus.Errorf("fail to deploy ketherObject, err: %v", err)
+				log.Error("fail to deploy ketherObject", "err", err)
 				return
 			}
-			logrus.Infof("kether object deployed")
+			log.Info("kether object deployed")
 		},
 	}
 )

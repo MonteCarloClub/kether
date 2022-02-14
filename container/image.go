@@ -25,23 +25,33 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 
+	"github.com/MonteCarloClub/kether/log"
 	"github.com/docker/docker/api/types"
-	"github.com/sirupsen/logrus"
 )
 
 func PullDockerImage(ctx context.Context, imageName string) error {
+	var err error
 	if imageName == "" {
-		logrus.Errorf("empty image name")
-		return fmt.Errorf("empty image name")
-	}
-	readCloser, err := DockerApiClient.ImagePull(ctx, imageName, types.ImagePullOptions{})
-	io.Copy(os.Stdout, readCloser)
-	if err != nil {
-		logrus.Errorf("fail to pull docker image, refStr: %v, err: %v", imageName, err)
+		err = fmt.Errorf("empty image name")
+		log.Error("empty image name", "err", err)
 		return err
 	}
-	logrus.Infof("docker image pulled, refStr: %v", imageName)
+
+	readCloser, err := DockerApiClient.ImagePull(ctx, imageName, types.ImagePullOptions{})
+	var dst io.Writer
+	if log.IfTraceOrDebug() {
+		dst = os.Stdout
+	} else {
+		dst = ioutil.Discard
+	}
+	io.Copy(dst, readCloser)
+	if err != nil {
+		log.Error("fail to pull docker image", "refStr", imageName, "err", err)
+		return err
+	}
+	log.Info("docker image pulled", "refStr", imageName)
 	return nil
 }

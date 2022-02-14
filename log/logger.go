@@ -19,24 +19,56 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
-package container
+package log
 
 import (
-	"github.com/MonteCarloClub/kether/log"
-	"github.com/docker/docker/client"
+	"os"
+
+	"github.com/sirupsen/logrus"
 )
 
 var (
-	DockerApiClient *client.Client
+	Logger *logrus.Logger
 )
 
-func InitDockerApiClient() error {
-	var err error
-	DockerApiClient, err = client.NewClientWithOpts()
-	if err != nil {
-		log.Error("fail to init docker api client", "err", err)
-		return err
+func InitLogger() {
+	Logger = logrus.New()
+	Logger.Out = os.Stdout
+	Logger.Formatter = &logrus.JSONFormatter{
+		TimestampFormat: "2006-01-02 15:04:05.000",
 	}
-	log.Info("docker api client inited")
-	return nil
+	Logger.Info("logger inited")
+}
+
+func IfTraceOrDebug() bool {
+	level := Logger.GetLevel()
+	return level == logrus.DebugLevel || level == logrus.TraceLevel
+}
+
+func getFields(fieldArgs ...interface{}) logrus.Fields {
+	fields := map[string]interface{}{}
+	for i := 0; i < len(fieldArgs); i += 2 {
+		key := fieldArgs[i].(string)
+		var value interface{}
+		if i+1 < len(fieldArgs) {
+			value = fieldArgs[i+1]
+		} else {
+			value = nil
+			Logger.Warn("parameter length of {Info|Warning|Error} should be odd")
+		}
+		fields[key] = value
+	}
+	return fields
+}
+
+func Info(msg string, fieldArgs ...interface{}) {
+	Logger.WithFields(getFields(fieldArgs...)).Info(msg)
+}
+
+func Warn(msg string, fieldArgs ...interface{}) {
+	Logger.WithFields(getFields(fieldArgs...)).Warn(msg)
+}
+
+func Error(msg string, fieldArgs ...interface{}) {
+	Logger.WithFields(getFields(fieldArgs...)).Error(msg)
 }

@@ -22,12 +22,12 @@ THE SOFTWARE.
 package machine
 
 import (
-	"github.com/sirupsen/logrus"
+	"github.com/MonteCarloClub/kether/log"
 )
 
 func CheckIfHostPortAvailable(hostPort string) bool {
 	if hostPort == "" {
-		logrus.Warnf("empty host port")
+		log.Warn("empty host port")
 		return false
 	}
 	// TODO 返回这个主机端口是否被占用

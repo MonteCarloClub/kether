@@ -21,7 +21,9 @@ THE SOFTWARE.
 */
 package main
 
-import "github.com/MonteCarloClub/kether/cmd"
+import (
+	"github.com/MonteCarloClub/kether/cmd"
+)
 
 func main() {
 	cmd.Execute()
