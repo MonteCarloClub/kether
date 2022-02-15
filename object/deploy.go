@@ -26,15 +26,28 @@ import (
 	"fmt"
 
 	"github.com/MonteCarloClub/kether/container"
+	"github.com/MonteCarloClub/kether/flag"
 	"github.com/MonteCarloClub/kether/log"
 )
 
-func Deploy(ketherObject *KetherObject, ketherObjectState *KetherObjectState) error {
-	// TODO ctx 应该是单子，定义在 main
-	ctx := context.Background()
-
+func Deploy(ctx context.Context, ketherObject *KetherObject, ketherObjectState *KetherObjectState) error {
+	var err error
 	imageName := ketherObject.GetImageName()
-	err := container.PullDockerImage(ctx, imageName)
+	containerConfig, hostConfig := ketherObject.GetContainerConfig()
+
+	if ctx.Value(flag.ContextKey).(flag.ContextValType).DryRun {
+		log.Info("image name gotten", "imageName", imageName)
+		if containerConfig != nil {
+			log.Info("container config gotten", "containerConfig", containerConfig)
+		}
+		if hostConfig != nil {
+			log.Info("host config gotten", "hostConfig", hostConfig)
+		}
+		log.Info("deploying kether object in dry run mode will not change any state")
+		return nil
+	}
+
+	err = container.PullDockerImage(ctx, imageName)
 	if err != nil {
 		ketherObjectState.SetState(FAIL_TO_DEPLOY)
 		log.Error("fail to pull docker image", "imageName", imageName, "err", err)
@@ -42,7 +55,6 @@ func Deploy(ketherObject *KetherObject, ketherObjectState *KetherObjectState) er
 	}
 	log.Info("docker image pulled")
 
-	containerConfig, hostConfig := ketherObject.GetContainerConfig()
 	id, err := container.CreateDockerContainer(ctx, containerConfig, hostConfig)
 	if id == "" {
 		ketherObjectState.SetState(FAIL_TO_DEPLOY)

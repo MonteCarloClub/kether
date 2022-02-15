@@ -19,40 +19,14 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
-package container
+package flag
 
-import (
-	"context"
-	"fmt"
-	"io"
-	"io/ioutil"
-	"os"
+type ContextKeyType string
 
-	"github.com/MonteCarloClub/kether/log"
-	"github.com/docker/docker/api/types"
-)
-
-func PullDockerImage(ctx context.Context, imageName string) error {
-	var err error
-	if imageName == "" {
-		err = fmt.Errorf("empty image name")
-		log.Error("empty image name", "err", err)
-		return err
-	}
-
-	reader, err := DockerApiClient.ImagePull(ctx, imageName, types.ImagePullOptions{})
-	var dst io.Writer
-	if log.IfTraceOrDebug() {
-		dst = os.Stdout
-	} else {
-		dst = ioutil.Discard
-	}
-	defer reader.Close()
-	io.Copy(dst, reader)
-	if err != nil {
-		log.Error("fail to pull docker image", "refStr", imageName, "err", err)
-		return err
-	}
-	log.Info("docker image pulled", "refStr", imageName)
-	return nil
+type ContextValType struct {
+	DryRun bool
 }
+
+const (
+	ContextKey ContextKeyType = "CTXKEY"
+)

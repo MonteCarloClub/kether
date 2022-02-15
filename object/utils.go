@@ -151,5 +151,6 @@ func (ketherObject *KetherObject) GetContainerConfig() (*container.Config, *cont
 }
 
 func (ketherObjectState *KetherObjectState) SetState(state KetherObjectStateType) {
+	// TODO 根据 ketherObjectState 注册服务状态
 	ketherObjectState.State = state
 }

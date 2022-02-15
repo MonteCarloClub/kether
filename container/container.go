@@ -50,13 +50,15 @@ func RunDockerContainer(ctx context.Context, id string) error {
 	}
 	log.Info("container started", "id", id)
 
-	containerWaitOKBodyChan, errChan := DockerApiClient.ContainerWait(ctx, id, container.WaitConditionNotRunning)
+	statusCh, errChan := DockerApiClient.ContainerWait(ctx, id, container.WaitConditionNotRunning)
 	select {
-	case <-containerWaitOKBodyChan:
+	case <-statusCh:
 		log.Info("container not running", "id", id)
 	case err := <-errChan:
 		log.Error("error encountered while container running", "id", id, "err", err)
 		return err
 	}
+
+	// TODO 输出容器日志，参考：https://docs.docker.com/engine/api/sdk/examples/
 	return nil
 }

@@ -22,12 +22,14 @@ THE SOFTWARE.
 package object
 
 import (
+	"context"
 	"fmt"
 
+	"github.com/MonteCarloClub/kether/flag"
 	"github.com/MonteCarloClub/kether/log"
 )
 
-func Register(dryRun bool, yamlPath string) (*KetherObject, *KetherObjectState, error) {
+func Register(ctx context.Context, yamlPath string) (*KetherObject, *KetherObjectState, error) {
 	var err error
 	ketherObject, ketherObjectState, err := ParseYaml(yamlPath)
 	if ketherObject == nil {
@@ -39,9 +41,8 @@ func Register(dryRun bool, yamlPath string) (*KetherObject, *KetherObjectState, 
 	} else if err != nil {
 		log.Error("fail to parse yaml file", "err", err)
 	}
-	if dryRun {
+	if ctx.Value(flag.ContextKey).(flag.ContextValType).DryRun {
 		log.Info("registering kether object in dry run mode will not change any state")
 	}
-	// TODO 根据 ketherObject 部署服务，根据 ketherObjectState 注册服务状态
 	return ketherObject, ketherObjectState, err
 }
