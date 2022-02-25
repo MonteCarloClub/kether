@@ -20,5 +20,8 @@ vendor/
 # OSX trash
 .DS_Store
 
+# GoLand trash
+.idea/
+
 # Product
 bin/

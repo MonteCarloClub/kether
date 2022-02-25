@@ -1,0 +1,10 @@
+name: http-https-echo-test
+kind: deploy
+predicate:
+  repository: mendhak/http-https-echo
+priority:
+  tag: 23
+requirement:
+  publish_list:
+    - 8080:8080
+    - 8443:8443
