@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2022 Zhang Zhanpeng <zhangregister@outlook.com>
+Copyright (c) 2022 Zhang Zhanpeng <zhangregister@outlook.com>, Cai Dongliang <18307130121@fudan.edu.cn>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -23,6 +23,7 @@ package object
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/MonteCarloClub/kether/log"
 	"github.com/MonteCarloClub/kether/machine"
@@ -36,8 +37,7 @@ type ResourceDescriptionEntity struct {
 }
 
 type RunDescriptionEntity struct {
-	HostPort      string `yaml:"host_port"`
-	ContainerPort string `yaml:"container_port"`
+	PublishList []string `yaml:"publish_list"`
 }
 
 type KetherObjectEntity struct {
@@ -90,8 +90,7 @@ func (ketherObjectEntity *KetherObjectEntity) GetKetherObject() *KetherObject {
 			DockerImageTag:        ketherObjectEntity.Priority.DockerImageTag,
 		},
 		Requirement: &RunDescription{
-			HostPort:      ketherObjectEntity.Requirement.HostPort,
-			ContainerPort: ketherObjectEntity.Requirement.ContainerPort,
+			PublishList: ketherObjectEntity.Requirement.PublishList,
 		},
 	}
 }
@@ -122,31 +121,74 @@ func (ketherObject *KetherObject) GetImageName() string {
 }
 
 func (ketherObject *KetherObject) GetContainerConfig() (*container.Config, *container.HostConfig) {
-	hostPort, containerPort := ketherObject.Requirement.HostPort, ketherObject.Requirement.ContainerPort
-	if containerPort == "" {
-		log.Info("no exposed port")
+	publishList := ketherObject.Requirement.PublishList
+	if len(publishList) == 0 {
+		log.Info("empty publish list")
 		return nil, nil
 	}
-	if !machine.CheckIfHostPortAvailable(hostPort) {
-		hostPort = machine.GetAvailableHostPort()
-		log.Info("no available host port specified", "mapped host port", hostPort)
+
+	hostPortMap := make(map[string]string, len(publishList))           // 主机端口 -> 容器端口
+	containerPortMap := make(map[string]nat.PortSet, len(publishList)) // 容器端口 -> 主机端口集
+	for _, portPair := range publishList {
+		portSlice := strings.Split(portPair, ":")
+		if len(portSlice) != 2 {
+			log.Warn("invalid port map", "portPair", portPair)
+			continue
+		}
+		// 同一主机端口不能被不同容器端口映射
+		if _, ok := hostPortMap[portSlice[0]]; ok {
+			if hostPortMap[portSlice[0]] != portSlice[1] {
+				log.Error("host port conflict", "host port", portSlice[0], "container ports", fmt.Sprintf("%v, %v...", hostPortMap[portSlice[0]], portSlice[1]), "err", fmt.Errorf("host port conflict"))
+				return nil, nil
+			}
+		} else {
+			hostPortMap[portSlice[0]] = portSlice[1]
+		}
+	}
+	for hostPort, containerPort := range hostPortMap {
+		if _, ok := containerPortMap[containerPort]; !ok {
+			containerPortMap[containerPort] = make(nat.PortSet)
+		}
+		containerPortMap[containerPort][nat.Port(hostPort)] = struct{}{}
+	}
+
+	exposedPorts := make(nat.PortSet) // 容器端口列表
+	portBindings := make(nat.PortMap) // 容器端口列表 -> 主机端口集列表
+	for containerPort, hostPortSet := range containerPortMap {
+		if containerPort == "" {
+			log.Warn("no exposed port, ignored")
+			continue
+		}
+		if len(hostPortSet) == 0 {
+			hostPort := machine.GetAvailableHostPort()
+			hostPortSet[nat.Port(hostPort)] = struct{}{}
+			log.Info("no available host port specified", "mapped host port", hostPort)
+		}
+
+		exposedPorts[nat.Port(containerPort)] = struct{}{}
+		portBindingsValue := make([]nat.PortBinding, 0)
+		for hostPort := range hostPortSet {
+			var portBindingsValueElem nat.PortBinding
+			if machine.CheckIfHostPortAvailable(string(hostPort)) {
+				portBindingsValueElem.HostPort = string(hostPort)
+			} else {
+				altHostPort := nat.Port(machine.GetAvailableHostPort())
+				log.Info("specified host port unavailable", "specified host port", hostPort, "alternate host port", altHostPort)
+				portBindingsValueElem.HostPort = string(altHostPort)
+			}
+			portBindingsValue = append(portBindingsValue, portBindingsValueElem)
+		}
+		portBindings[nat.Port(containerPort)] = portBindingsValue
 	}
 
 	containerConfig := &container.Config{
-		Image: ketherObject.GetImageName(),
-		ExposedPorts: nat.PortSet{
-			nat.Port(containerPort): struct{}{},
-		},
+		Image:        ketherObject.GetImageName(),
+		ExposedPorts: exposedPorts,
 	}
 	hostConfig := &container.HostConfig{
-		PortBindings: nat.PortMap{
-			nat.Port(containerPort): []nat.PortBinding{
-				{
-					HostPort: hostPort,
-				},
-			},
-		},
+		PortBindings: portBindings,
 	}
+
 	return containerConfig, hostConfig
 }
 
