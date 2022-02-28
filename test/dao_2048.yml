@@ -5,5 +5,5 @@ predicate:
 priority:
   tag: 1.1.0-alpha.6
 requirement:
-  host_port: 8080
-  container_port: 80
+  publish_list:
+    - 8080:80

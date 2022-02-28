@@ -22,19 +22,34 @@ THE SOFTWARE.
 package machine
 
 import (
+	"fmt"
+	"math/rand"
+	"net"
+	"strconv"
+
 	"github.com/MonteCarloClub/kether/log"
 )
 
 func CheckIfHostPortAvailable(hostPort string) bool {
-	if hostPort == "" {
-		log.Warn("empty host port")
+	hostPortInt, err := strconv.Atoi(hostPort)
+	if err != nil || hostPortInt < 1024 || hostPortInt > 49151 {
 		return false
 	}
-	// TODO 返回这个主机端口是否被占用
-	return true
+	ln, err := net.Listen("tcp", fmt.Sprintf(":%v", hostPort))
+	if err != nil {
+		return false
+	}
+	err = ln.Close()
+	return err == nil
 }
 
 func GetAvailableHostPort() string {
-	// TODO 返回一个未被占用的主机端口
-	return "8080"
+	for i := 0; i < 1000; i++ {
+		randHostPort := strconv.Itoa(8000 + rand.Intn(1000))
+		if CheckIfHostPortAvailable(randHostPort) {
+			return randHostPort
+		}
+	}
+	log.Warn("fail to get available host port in [8000, 9000)")
+	return ""
 }

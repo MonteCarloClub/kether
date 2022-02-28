@@ -159,22 +159,32 @@ func (ketherObject *KetherObject) GetContainerConfig() (*container.Config, *cont
 			log.Warn("no exposed port, ignored")
 			continue
 		}
-		if len(hostPortSet) == 0 {
-			hostPort := machine.GetAvailableHostPort()
-			hostPortSet[nat.Port(hostPort)] = struct{}{}
-			log.Info("no available host port specified", "mapped host port", hostPort)
-		}
-
 		exposedPorts[nat.Port(containerPort)] = struct{}{}
+
 		portBindingsValue := make([]nat.PortBinding, 0)
+		var ifhostPortAvailable bool
+		if len(hostPortSet) == 0 {
+			altHostPort := machine.GetAvailableHostPort()
+			if altHostPort == "" {
+				log.Warn("fail to get alternate host port")
+				continue
+			}
+			hostPortSet[nat.Port(altHostPort)] = struct{}{}
+			ifhostPortAvailable = true
+			log.Info("no available host port specified", "alternate host port", altHostPort)
+		}
 		for hostPort := range hostPortSet {
 			var portBindingsValueElem nat.PortBinding
-			if machine.CheckIfHostPortAvailable(string(hostPort)) {
+			if ifhostPortAvailable || machine.CheckIfHostPortAvailable(string(hostPort)) {
 				portBindingsValueElem.HostPort = string(hostPort)
 			} else {
 				altHostPort := nat.Port(machine.GetAvailableHostPort())
-				log.Info("specified host port unavailable", "specified host port", hostPort, "alternate host port", altHostPort)
+				if altHostPort == "" {
+					log.Warn("fail to get alternate host port", "unavailable host port", hostPort)
+					continue
+				}
 				portBindingsValueElem.HostPort = string(altHostPort)
+				log.Info("specified host port unavailable", "specified host port", hostPort, "alternate host port", altHostPort)
 			}
 			portBindingsValue = append(portBindingsValue, portBindingsValueElem)
 		}
