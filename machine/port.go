@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2022 Zhang Zhanpeng <zhangregister@outlook.com>
+Copyright (c) 2022 Zhang Zhanpeng <zhangregister@outlook.com>, Zhong Chongpeng <1940064747@qq.com>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
