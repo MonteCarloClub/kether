@@ -23,7 +23,6 @@ package machine
 
 import (
 	"fmt"
-	"math/rand"
 	"net"
 	"strconv"
 
@@ -45,9 +44,9 @@ func CheckIfHostPortAvailable(hostPort string) bool {
 
 func GetAvailableHostPort() string {
 	for i := 0; i < 1000; i++ {
-		randHostPort := strconv.Itoa(8000 + rand.Intn(1000))
-		if CheckIfHostPortAvailable(randHostPort) {
-			return randHostPort
+		candidateHostPort := strconv.Itoa(8000 + i)
+		if CheckIfHostPortAvailable(candidateHostPort) {
+			return candidateHostPort
 		}
 	}
 	log.Warn("fail to get available host port in [8000, 9000)")

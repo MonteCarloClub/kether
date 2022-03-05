@@ -22,12 +22,16 @@ THE SOFTWARE.
 package object
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
+	kethercontainer "github.com/MonteCarloClub/kether/container"
 	"github.com/MonteCarloClub/kether/log"
 	"github.com/MonteCarloClub/kether/machine"
+	"github.com/MonteCarloClub/kether/registry"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/network"
 	"github.com/docker/go-connections/nat"
 )
 
@@ -37,6 +41,8 @@ type ResourceDescriptionEntity struct {
 }
 
 type RunDescriptionEntity struct {
+	Detach      bool     `yaml:"detach"`
+	NetworkList []string `yaml:"network_list"`
 	PublishList []string `yaml:"publish_list"`
 }
 
@@ -90,6 +96,8 @@ func (ketherObjectEntity *KetherObjectEntity) GetKetherObject() *KetherObject {
 			DockerImageTag:        ketherObjectEntity.Priority.DockerImageTag,
 		},
 		Requirement: &RunDescription{
+			Detach:      ketherObjectEntity.Requirement.Detach,
+			NetworkList: ketherObjectEntity.Requirement.NetworkList,
 			PublishList: ketherObjectEntity.Requirement.PublishList,
 		},
 	}
@@ -101,26 +109,37 @@ func (ketherObjectEntity *KetherObjectEntity) GetKetherObjectState() *KetherObje
 	}
 }
 
-func (ketherObject *KetherObject) GetImageName() string {
-	repository, tag := ketherObject.Predicate.DockerImageRepository, ketherObject.Predicate.DockerImageTag
-	if repository == "" {
-		repository = ketherObject.Priority.DockerImageRepository
-	}
-	if tag == "" {
-		tag = ketherObject.Priority.DockerImageTag
-	}
-
-	if repository == "" {
-		log.Error("empty image name", "err", fmt.Errorf("empty repository"))
-		return ""
-	}
+func getImageName(repository string, tag string) string {
+	// assert: repository != ""
 	if tag == "" {
 		return repository
 	}
 	return fmt.Sprintf("%v:%v", repository, tag)
 }
 
-func (ketherObject *KetherObject) GetContainerConfig() (*container.Config, *container.HostConfig) {
+func (ketherObject *KetherObject) GetImageName() string {
+	candidateRepository := make([]string, 0)
+	if ketherObject.Priority.DockerImageRepository != "" {
+		candidateRepository = append(candidateRepository, ketherObject.Priority.DockerImageRepository)
+	}
+	if ketherObject.Predicate.DockerImageRepository != "" {
+		candidateRepository = append(candidateRepository, ketherObject.Predicate.DockerImageRepository)
+	}
+	candidateTag := []string{ketherObject.Priority.DockerImageTag, ketherObject.Predicate.DockerImageTag}
+
+	for _, repository := range candidateRepository {
+		for _, tag := range candidateTag {
+			candidateImageName := getImageName(repository, tag)
+			if kethercontainer.CheckIfDockerImageAvailable(candidateImageName) {
+				return candidateImageName
+			}
+		}
+	}
+	log.Warn("no available image name specified", "candidateRepository", candidateRepository, "candidateTag", candidateTag)
+	return ""
+}
+
+func (ketherObject *KetherObject) GetContainerAndHostConfig() (*container.Config, *container.HostConfig) {
 	publishList := ketherObject.Requirement.PublishList
 	if len(publishList) == 0 {
 		log.Info("empty publish list")
@@ -202,7 +221,44 @@ func (ketherObject *KetherObject) GetContainerConfig() (*container.Config, *cont
 	return containerConfig, hostConfig
 }
 
-func (ketherObjectState *KetherObjectState) SetState(state KetherObjectStateType) {
-	// TODO 根据 ketherObjectState 注册服务状态
+func (ketherObject *KetherObject) GetNetworkingConfig() *network.NetworkingConfig {
+	networkList := ketherObject.Requirement.NetworkList
+	if len(networkList) == 0 {
+		log.Info("empty network list")
+		return nil
+	}
+
+	// assert: len(networkList) < 2
+	// TODO 支持把同一容器部署到不同网络，对网络名和网关去重，确认网络和网关是否存在
+	endpointsConfig := make(map[string]*network.EndpointSettings)
+	for _, networkGatewayPair := range networkList {
+		networkSlice := strings.Split(networkGatewayPair, ":")
+		if len(networkSlice) != 2 {
+			log.Warn("invalid network-gateway pair", "networkGatewayPair", networkGatewayPair)
+			continue
+		}
+		endpointsConfig[networkSlice[0]] = &network.EndpointSettings{
+			Gateway: networkSlice[1],
+		}
+	}
+	networkingConfig := &network.NetworkingConfig{
+		EndpointsConfig: endpointsConfig,
+	}
+	return networkingConfig
+}
+
+func (ketherObject *KetherObject) GetContainerName() string {
+	return ketherObject.Name
+}
+
+func (ketherObjectState *KetherObjectState) SetState(ctx context.Context, state KetherObjectStateType) error {
 	ketherObjectState.State = state
+
+	err := registry.SetStateOfName(ctx, ketherObjectState.Name, fmt.Sprint(ketherObjectState.State))
+	if err != nil {
+		log.Error("fail to set state of kether object", "name", ketherObjectState.Name, "state", ketherObjectState.State, "err", err)
+		return err
+	}
+	log.Info("state of kether object set", "name", ketherObjectState.Name, "state", ketherObjectState.State)
+	return nil
 }

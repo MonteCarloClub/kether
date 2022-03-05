@@ -50,6 +50,5 @@ func ParseYaml(yamlPath string) (*KetherObject, *KetherObjectState, error) {
 
 	ketherObject := ketherObjectEntity.GetKetherObject()
 	ketherObjectState := ketherObjectEntity.GetKetherObjectState()
-	ketherObjectState.SetState(REGISTERED)
 	return ketherObject, ketherObjectState, nil
 }

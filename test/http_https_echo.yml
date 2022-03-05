@@ -1,10 +1,12 @@
-name: http-https-echo-test
+name: http-https-echo-server
 kind: deploy
 predicate:
   repository: mendhak/http-https-echo
 priority:
   tag: 23
 requirement:
+  detach: true
+  network_list:
+    - kether-net:172.*.0.1
   publish_list:
-    - 8080:8080
     - 8443:8443

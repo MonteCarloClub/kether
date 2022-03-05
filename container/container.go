@@ -27,10 +27,11 @@ import (
 	"github.com/MonteCarloClub/kether/log"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/network"
 )
 
-func CreateDockerContainer(ctx context.Context, containerConfig *container.Config, hostConfig *container.HostConfig) (string, error) {
-	containerCreateCreatedBody, err := DockerApiClient.ContainerCreate(ctx, containerConfig, hostConfig, nil, nil, "")
+func CreateDockerContainer(ctx context.Context, containerConfig *container.Config, hostConfig *container.HostConfig, networkingConfig *network.NetworkingConfig, containerName string) (string, error) {
+	containerCreateCreatedBody, err := DockerApiClient.ContainerCreate(ctx, containerConfig, hostConfig, networkingConfig, nil, containerName)
 	if len(containerCreateCreatedBody.Warnings) > 0 {
 		log.Warn("ContainerCreate returned warning(s)", "warning", containerCreateCreatedBody.Warnings)
 	}
@@ -60,5 +61,15 @@ func RunDockerContainer(ctx context.Context, id string) error {
 	}
 
 	// TODO 输出容器日志，参考：https://docs.docker.com/engine/api/sdk/examples/
+	return nil
+}
+
+func RunDockerContainerInBackground(ctx context.Context, id string) error {
+	err := DockerApiClient.ContainerStart(ctx, id, types.ContainerStartOptions{})
+	if err != nil {
+		log.Error("fail to start container in background", "id", id, "err", err)
+		return err
+	}
+	log.Info("container started in background", "id", id)
 	return nil
 }

@@ -19,25 +19,26 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
-package main
+package registry
 
 import (
-	"github.com/MonteCarloClub/kether/container"
+	"context"
+	"fmt"
+
 	"github.com/MonteCarloClub/kether/log"
-	"github.com/MonteCarloClub/kether/registry"
 )
 
-func init() {
-	log.InitLogger()
-	log.Info("logger inited")
+func getStateKey(name string) string {
+	return fmt.Sprintf("state_%v", name)
+}
 
-	registry.InitRedisClient()
-	log.Info("redis client inited")
-
-	err := container.InitDockerApiClient()
+func SetStateOfName(ctx context.Context, name string, state string) error {
+	key := getStateKey(name)
+	err := RedisClient.Set(ctx, key, state, 0).Err()
 	if err != nil {
-		log.Error("fail to init docker api client", "err", err)
-		return
+		log.Error("fail to set state of kether object", "key", key, "value", state, "err", err)
+		return err
 	}
-	log.Info("docker api client inited")
+	log.Info("state of kether object set", "key", key, "value", state)
+	return nil
 }
