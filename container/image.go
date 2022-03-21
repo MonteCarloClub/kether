@@ -32,6 +32,11 @@ import (
 	"github.com/docker/docker/api/types"
 )
 
+func CheckIfDockerImageAvailable(imageName string) bool {
+	// TODO 根据 Docker 镜像名检查对应的 Docker 镜像是否可用
+	return true
+}
+
 func PullDockerImage(ctx context.Context, imageName string) error {
 	var err error
 	if imageName == "" {
