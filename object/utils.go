@@ -25,6 +25,7 @@ import (
 	"fmt"
 	"strings"
 
+	kethercontainer "github.com/MonteCarloClub/kether/container"
 	"github.com/MonteCarloClub/kether/log"
 	"github.com/MonteCarloClub/kether/machine"
 	"github.com/docker/docker/api/types/container"
@@ -101,23 +102,34 @@ func (ketherObjectEntity *KetherObjectEntity) GetKetherObjectState() *KetherObje
 	}
 }
 
-func (ketherObject *KetherObject) GetImageName() string {
-	repository, tag := ketherObject.Predicate.DockerImageRepository, ketherObject.Predicate.DockerImageTag
-	if repository == "" {
-		repository = ketherObject.Priority.DockerImageRepository
-	}
-	if tag == "" {
-		tag = ketherObject.Priority.DockerImageTag
-	}
-
-	if repository == "" {
-		log.Error("empty image name", "err", fmt.Errorf("empty repository"))
-		return ""
-	}
+func getImageName(repository string, tag string) string {
+	// assert: repository != ""
 	if tag == "" {
 		return repository
 	}
 	return fmt.Sprintf("%v:%v", repository, tag)
+}
+
+func (ketherObject *KetherObject) GetImageName() string {
+	candidateRepository := make([]string, 0)
+	if ketherObject.Priority.DockerImageRepository != "" {
+		candidateRepository = append(candidateRepository, ketherObject.Priority.DockerImageRepository)
+	}
+	if ketherObject.Predicate.DockerImageRepository != "" {
+		candidateRepository = append(candidateRepository, ketherObject.Predicate.DockerImageRepository)
+	}
+	candidateTag := []string{ketherObject.Priority.DockerImageTag, ketherObject.Predicate.DockerImageTag}
+
+	for _, repository := range candidateRepository {
+		for _, tag := range candidateTag {
+			candidateImageName := getImageName(repository, tag)
+			if kethercontainer.CheckIfDockerImageAvailable(candidateImageName) {
+				return candidateImageName
+			}
+		}
+	}
+	log.Warn("no available image name specified", "candidateRepository", candidateRepository, "candidateTag", candidateTag)
+	return ""
 }
 
 func (ketherObject *KetherObject) GetContainerConfig() (*container.Config, *container.HostConfig) {
