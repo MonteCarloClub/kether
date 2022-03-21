@@ -38,6 +38,7 @@ type ResourceDescriptionEntity struct {
 }
 
 type RunDescriptionEntity struct {
+	Detach      bool     `yaml:"detach"`
 	PublishList []string `yaml:"publish_list"`
 }
 
@@ -91,6 +92,7 @@ func (ketherObjectEntity *KetherObjectEntity) GetKetherObject() *KetherObject {
 			DockerImageTag:        ketherObjectEntity.Priority.DockerImageTag,
 		},
 		Requirement: &RunDescription{
+			Detach:      ketherObjectEntity.Requirement.Detach,
 			PublishList: ketherObjectEntity.Requirement.PublishList,
 		},
 	}

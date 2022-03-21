@@ -5,6 +5,7 @@ predicate:
 priority:
   tag: 23
 requirement:
+  detach: true
   publish_list:
     - 8080:8080
     - 8443:8443
