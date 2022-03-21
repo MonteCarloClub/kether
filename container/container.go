@@ -62,3 +62,13 @@ func RunDockerContainer(ctx context.Context, id string) error {
 	// TODO 输出容器日志，参考：https://docs.docker.com/engine/api/sdk/examples/
 	return nil
 }
+
+func RunDockerContainerInBackground(ctx context.Context, id string) error {
+	err := DockerApiClient.ContainerStart(ctx, id, types.ContainerStartOptions{})
+	if err != nil {
+		log.Error("fail to start container in background", "id", id, "err", err)
+		return err
+	}
+	log.Info("container started in background", "id", id)
+	return nil
+}

@@ -69,13 +69,17 @@ func Deploy(ctx context.Context, ketherObject *KetherObject, ketherObjectState *
 	}
 	log.Info("container created")
 
-	err = container.RunDockerContainer(ctx, id)
+	if ketherObject.Requirement.Detach {
+		err = container.RunDockerContainerInBackground(ctx, id)
+	} else {
+		err = container.RunDockerContainer(ctx, id)
+	}
 	if err != nil {
 		ketherObjectState.SetState(FAIL_TO_DEPLOY)
-		log.Error("fail to run docker container", "err", err)
+		log.Error("fail to run docker container in {foreground|background}", "err", err)
 		return err
 	}
 	ketherObjectState.SetState(DEPLOYED)
-	log.Info("container run")
+	log.Info("container run in {foreground|background}")
 	return nil
 }
