@@ -49,22 +49,22 @@ func Deploy(ctx context.Context, ketherObject *KetherObject, ketherObjectState *
 
 	err = container.PullDockerImage(ctx, imageName)
 	if err != nil {
-		ketherObjectState.SetState(FAIL_TO_DEPLOY)
 		log.Error("fail to pull docker image", "imageName", imageName, "err", err)
+		ketherObjectState.SetState(ctx, FAIL_TO_DEPLOY)
 		return err
 	}
 	log.Info("docker image pulled")
 
 	id, err := container.CreateDockerContainer(ctx, containerConfig, hostConfig)
 	if id == "" {
-		ketherObjectState.SetState(FAIL_TO_DEPLOY)
 		err = fmt.Errorf("empty container id")
 		log.Error("fail to create docker container, empty id", "err", err)
+		ketherObjectState.SetState(ctx, FAIL_TO_DEPLOY)
 		return err
 	}
 	if err != nil {
-		ketherObjectState.SetState(FAIL_TO_DEPLOY)
 		log.Error("fail to create docker container", "id", id, "err", err)
+		ketherObjectState.SetState(ctx, FAIL_TO_DEPLOY)
 		return err
 	}
 	log.Info("container created")
@@ -75,11 +75,16 @@ func Deploy(ctx context.Context, ketherObject *KetherObject, ketherObjectState *
 		err = container.RunDockerContainer(ctx, id)
 	}
 	if err != nil {
-		ketherObjectState.SetState(FAIL_TO_DEPLOY)
 		log.Error("fail to run docker container in {foreground|background}", "err", err)
+		ketherObjectState.SetState(ctx, FAIL_TO_DEPLOY)
 		return err
 	}
-	ketherObjectState.SetState(DEPLOYED)
 	log.Info("container run in {foreground|background}")
+	err = ketherObjectState.SetState(ctx, DEPLOYED)
+	if err != nil {
+		log.Error("fail to set state of kether object", "name", ketherObjectState.Name, "state", ketherObjectState.State, "err", err)
+		return err
+	}
+	log.Info("state of kether object set", "name", ketherObjectState.Name, "state", ketherObjectState.State)
 	return nil
 }

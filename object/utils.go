@@ -22,12 +22,14 @@ THE SOFTWARE.
 package object
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
 	kethercontainer "github.com/MonteCarloClub/kether/container"
 	"github.com/MonteCarloClub/kether/log"
 	"github.com/MonteCarloClub/kether/machine"
+	"github.com/MonteCarloClub/kether/registry"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/go-connections/nat"
 )
@@ -216,7 +218,14 @@ func (ketherObject *KetherObject) GetContainerConfig() (*container.Config, *cont
 	return containerConfig, hostConfig
 }
 
-func (ketherObjectState *KetherObjectState) SetState(state KetherObjectStateType) {
-	// TODO 根据 ketherObjectState 注册服务状态
+func (ketherObjectState *KetherObjectState) SetState(ctx context.Context, state KetherObjectStateType) error {
 	ketherObjectState.State = state
+
+	err := registry.SetStateOfName(ctx, ketherObjectState.Name, fmt.Sprint(ketherObjectState.State))
+	if err != nil {
+		log.Error("fail to set state of kether object", "name", ketherObjectState.Name, "state", ketherObjectState.State, "err", err)
+		return err
+	}
+	log.Info("state of kether object set", "name", ketherObjectState.Name, "state", ketherObjectState.State)
+	return nil
 }

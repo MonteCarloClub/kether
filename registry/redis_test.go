@@ -19,25 +19,31 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
-package main
+package registry
 
 import (
-	"github.com/MonteCarloClub/kether/container"
-	"github.com/MonteCarloClub/kether/log"
-	"github.com/MonteCarloClub/kether/registry"
+	"context"
+	"testing"
+
+	"github.com/go-redis/redis/v8"
+	"github.com/stretchr/testify/assert"
 )
 
-func init() {
-	log.InitLogger()
-	log.Info("logger inited")
+func TestInitRedisClient(t *testing.T) {
+	redisClient := initRedisClient()
 
-	registry.InitRedisClient()
-	log.Info("redis client inited")
+	ctx := context.Background()
+	err := redisClient.Set(ctx, "k1", "v1", 0).Err()
+	assert.Nil(t, err)
 
-	err := container.InitDockerApiClient()
-	if err != nil {
-		log.Error("fail to init docker api client", "err", err)
-		return
-	}
-	log.Info("docker api client inited")
+	v1, err := redisClient.Get(ctx, "k1").Result()
+	assert.Nil(t, err)
+	assert.Equal(t, "v1", v1)
+
+	err = redisClient.Get(ctx, "k2").Err()
+	assert.Equal(t, redis.Nil, err)
+
+	delInt64, err := redisClient.Del(ctx, "k1", "k2").Result()
+	assert.Nil(t, err)
+	assert.Equal(t, int64(1), delInt64)
 }

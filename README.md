@@ -9,12 +9,19 @@ $ cd kether
 $ make all # 或 make kether
 ```
 
-1.2. 运行和部署测试用例。
+1.2. 在主机 6379 端口部署 redis 并测试，期望输出 `ok`。
+```bash
+$ docker pull redis:6.2.6
+$ docker run -d -p 6379:6379 redis:6.2.6
+$ go test -run TestInitRedisClient github.com/MonteCarloClub/kether/registry
+```
+
+1.3. 运行和部署测试用例。
 ```bash
 $ ./bin/kether deploy -f test/dao_2048.yml
 ```
 
-1.3. 清理产物。
+1.4. 清理产物。
 ```bash
 $ make clean
 ```

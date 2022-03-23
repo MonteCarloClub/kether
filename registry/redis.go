@@ -19,25 +19,25 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
-package main
+package registry
 
 import (
-	"github.com/MonteCarloClub/kether/container"
 	"github.com/MonteCarloClub/kether/log"
-	"github.com/MonteCarloClub/kether/registry"
+	"github.com/go-redis/redis/v8"
 )
 
-func init() {
-	log.InitLogger()
-	log.Info("logger inited")
+var (
+	RedisClient *redis.Client
+)
 
-	registry.InitRedisClient()
+func initRedisClient() *redis.Client {
+	redisClient := redis.NewClient(&redis.Options{
+		Addr: "localhost:6379",
+	})
+	return redisClient
+}
+
+func InitRedisClient() {
+	RedisClient = initRedisClient()
 	log.Info("redis client inited")
-
-	err := container.InitDockerApiClient()
-	if err != nil {
-		log.Error("fail to init docker api client", "err", err)
-		return
-	}
-	log.Info("docker api client inited")
 }
