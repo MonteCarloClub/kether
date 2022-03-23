@@ -41,8 +41,11 @@ func Register(ctx context.Context, yamlPath string) (*KetherObject, *KetherObjec
 	} else if err != nil {
 		log.Error("fail to parse yaml file", "err", err)
 	}
+	ketherObjectState.SetState(ctx, REGISTERED)
+
 	if ctx.Value(flag.ContextKey).(flag.ContextValType).DryRun {
 		log.Info("registering kether object in dry run mode will not change any state")
 	}
+
 	return ketherObject, ketherObjectState, err
 }
