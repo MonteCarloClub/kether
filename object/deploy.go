@@ -33,7 +33,9 @@ import (
 func Deploy(ctx context.Context, ketherObject *KetherObject, ketherObjectState *KetherObjectState) error {
 	var err error
 	imageName := ketherObject.GetImageName()
-	containerConfig, hostConfig := ketherObject.GetContainerConfig()
+	containerConfig, hostConfig := ketherObject.GetContainerAndHostConfig()
+	networkingConfig := ketherObject.GetNetworkingConfig()
+	containerName := ketherObject.GetContainerName()
 
 	if ctx.Value(flag.ContextKey).(flag.ContextValType).DryRun {
 		log.Info("image name gotten", "imageName", imageName)
@@ -42,6 +44,12 @@ func Deploy(ctx context.Context, ketherObject *KetherObject, ketherObjectState *
 		}
 		if hostConfig != nil {
 			log.Info("host config gotten", "hostConfig", hostConfig)
+		}
+		if networkingConfig != nil {
+			log.Info("networking config gotten", "networkingConfig", networkingConfig)
+		}
+		if containerName != "" {
+			log.Info("container name gotten", "containerName", containerName)
 		}
 		log.Info("deploying kether object in dry run mode will not change any state")
 		return nil
@@ -55,7 +63,7 @@ func Deploy(ctx context.Context, ketherObject *KetherObject, ketherObjectState *
 	}
 	log.Info("docker image pulled")
 
-	id, err := container.CreateDockerContainer(ctx, containerConfig, hostConfig)
+	id, err := container.CreateDockerContainer(ctx, containerConfig, hostConfig, networkingConfig, ketherObject.Name)
 	if id == "" {
 		err = fmt.Errorf("empty container id")
 		log.Error("fail to create docker container, empty id", "err", err)
