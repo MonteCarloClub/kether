@@ -31,6 +31,7 @@ import (
 	"github.com/MonteCarloClub/kether/machine"
 	"github.com/MonteCarloClub/kether/registry"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/network"
 	"github.com/docker/go-connections/nat"
 )
 
@@ -41,6 +42,7 @@ type ResourceDescriptionEntity struct {
 
 type RunDescriptionEntity struct {
 	Detach      bool     `yaml:"detach"`
+	NetworkList []string `yaml:"network_list"`
 	PublishList []string `yaml:"publish_list"`
 }
 
@@ -95,6 +97,7 @@ func (ketherObjectEntity *KetherObjectEntity) GetKetherObject() *KetherObject {
 		},
 		Requirement: &RunDescription{
 			Detach:      ketherObjectEntity.Requirement.Detach,
+			NetworkList: ketherObjectEntity.Requirement.NetworkList,
 			PublishList: ketherObjectEntity.Requirement.PublishList,
 		},
 	}
@@ -136,7 +139,7 @@ func (ketherObject *KetherObject) GetImageName() string {
 	return ""
 }
 
-func (ketherObject *KetherObject) GetContainerConfig() (*container.Config, *container.HostConfig) {
+func (ketherObject *KetherObject) GetContainerAndHostConfig() (*container.Config, *container.HostConfig) {
 	publishList := ketherObject.Requirement.PublishList
 	if len(publishList) == 0 {
 		log.Info("empty publish list")
@@ -216,6 +219,36 @@ func (ketherObject *KetherObject) GetContainerConfig() (*container.Config, *cont
 	}
 
 	return containerConfig, hostConfig
+}
+
+func (ketherObject *KetherObject) GetNetworkingConfig() *network.NetworkingConfig {
+	networkList := ketherObject.Requirement.NetworkList
+	if len(networkList) == 0 {
+		log.Info("empty network list")
+		return nil
+	}
+
+	// assert: len(networkList) < 2
+	// TODO 支持把同一容器部署到不同网络，对网络名和网关去重，确认网络和网关是否存在
+	endpointsConfig := make(map[string]*network.EndpointSettings)
+	for _, networkGatewayPair := range networkList {
+		networkSlice := strings.Split(networkGatewayPair, ":")
+		if len(networkSlice) != 2 {
+			log.Warn("invalid network-gateway pair", "networkGatewayPair", networkGatewayPair)
+			continue
+		}
+		endpointsConfig[networkSlice[0]] = &network.EndpointSettings{
+			Gateway: networkSlice[1],
+		}
+	}
+	networkingConfig := &network.NetworkingConfig{
+		EndpointsConfig: endpointsConfig,
+	}
+	return networkingConfig
+}
+
+func (ketherObject *KetherObject) GetContainerName() string {
+	return ketherObject.Name
 }
 
 func (ketherObjectState *KetherObjectState) SetState(ctx context.Context, state KetherObjectStateType) error {
