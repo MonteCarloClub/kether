@@ -41,9 +41,11 @@ type ResourceDescriptionEntity struct {
 }
 
 type RunDescriptionEntity struct {
+	LocalImage  bool     `yaml:"local_image"`
 	Detach      bool     `yaml:"detach"`
 	NetworkList []string `yaml:"network_list"`
 	PublishList []string `yaml:"publish_list"`
+	VolumeList  []string `yaml:"volume_list"`
 }
 
 type KetherObjectEntity struct {
@@ -96,9 +98,11 @@ func (ketherObjectEntity *KetherObjectEntity) GetKetherObject() *KetherObject {
 			DockerImageTag:        ketherObjectEntity.Priority.DockerImageTag,
 		},
 		Requirement: &RunDescription{
+			LocalImage:  ketherObjectEntity.Requirement.LocalImage,
 			Detach:      ketherObjectEntity.Requirement.Detach,
 			NetworkList: ketherObjectEntity.Requirement.NetworkList,
 			PublishList: ketherObjectEntity.Requirement.PublishList,
+			VolumeList:  ketherObjectEntity.Requirement.VolumeList,
 		},
 	}
 }
@@ -119,13 +123,23 @@ func getImageName(repository string, tag string) string {
 
 func (ketherObject *KetherObject) GetImageName() string {
 	candidateRepository := make([]string, 0)
+	candidateTag := make([]string, 0)
+
 	if ketherObject.Priority.DockerImageRepository != "" {
 		candidateRepository = append(candidateRepository, ketherObject.Priority.DockerImageRepository)
 	}
 	if ketherObject.Predicate.DockerImageRepository != "" {
 		candidateRepository = append(candidateRepository, ketherObject.Predicate.DockerImageRepository)
 	}
-	candidateTag := []string{ketherObject.Priority.DockerImageTag, ketherObject.Predicate.DockerImageTag}
+
+	// 空 tag 将被缺省设置成 latest，这应该是最差情况
+	if ketherObject.Priority.DockerImageTag != "" {
+		candidateTag = append(candidateTag, ketherObject.Priority.DockerImageTag)
+	}
+	if ketherObject.Predicate.DockerImageTag != "" {
+		candidateTag = append(candidateTag, ketherObject.Predicate.DockerImageTag)
+	}
+	candidateTag = append(candidateTag, "")
 
 	for _, repository := range candidateRepository {
 		for _, tag := range candidateTag {
@@ -141,11 +155,6 @@ func (ketherObject *KetherObject) GetImageName() string {
 
 func (ketherObject *KetherObject) GetContainerAndHostConfig() (*container.Config, *container.HostConfig) {
 	publishList := ketherObject.Requirement.PublishList
-	if len(publishList) == 0 {
-		log.Info("empty publish list")
-		return nil, nil
-	}
-
 	hostPortMap := make(map[string]string, len(publishList))           // 主机端口 -> 容器端口
 	containerPortMap := make(map[string]nat.PortSet, len(publishList)) // 容器端口 -> 主机端口集
 	for _, portPair := range publishList {
@@ -157,8 +166,8 @@ func (ketherObject *KetherObject) GetContainerAndHostConfig() (*container.Config
 		// 同一主机端口不能被不同容器端口映射
 		if _, ok := hostPortMap[portSlice[0]]; ok {
 			if hostPortMap[portSlice[0]] != portSlice[1] {
-				log.Error("host port conflict", "host port", portSlice[0], "container ports", fmt.Sprintf("%v, %v...", hostPortMap[portSlice[0]], portSlice[1]), "err", fmt.Errorf("host port conflict"))
-				return nil, nil
+				log.Warn("host port conflict, the latter container port will be ignored", "host port", portSlice[0], "container ports", fmt.Sprintf("%v and %v", hostPortMap[portSlice[0]], portSlice[1]))
+				continue
 			}
 		} else {
 			hostPortMap[portSlice[0]] = portSlice[1]
@@ -216,6 +225,11 @@ func (ketherObject *KetherObject) GetContainerAndHostConfig() (*container.Config
 	}
 	hostConfig := &container.HostConfig{
 		PortBindings: portBindings,
+	}
+
+	volumeList := ketherObject.Requirement.VolumeList
+	if len(volumeList) > 0 {
+		hostConfig.Binds = volumeList
 	}
 
 	return containerConfig, hostConfig

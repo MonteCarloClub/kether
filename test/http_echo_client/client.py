@@ -20,4 +20,7 @@
 import requests
 
 resp = requests.get("http://http-https-echo-server.kether-net:8080")
-print(resp.json())
+
+fo = open("/app/response.txt", "w")
+fo.write(str(resp.json()))
+fo.close()
