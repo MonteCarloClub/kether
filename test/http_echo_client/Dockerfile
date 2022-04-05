@@ -24,8 +24,9 @@ RUN sed -i 's#deb.debian.org#mirrors.tuna.tsinghua.edu.cn#g' /etc/apt/sources.li
     && apt install -y python3 python3-pip \
     && pip3 config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple \
     && pip3 install requests \
-    && mkdir /app
+    && mkdir /app \
+    && touch /app/response.txt
 
 COPY client.py /app
 
-CMD bash
+CMD python3 /app/client.py

@@ -18,32 +18,30 @@ go test -run TestInitRedisClient github.com/MonteCarloClub/kether/registry
 
 1.3. 运行和部署测试用例，对内发布 HTTP 服务，对外发布 HTTPS 服务。
 
-1.3.1. 创建 `kether-net` 网络，查询网关 IP，填充 `test/http_https_echo.yml` 的 `network_list` 字段的 `*` 处，部署 `http-https-echo-server`。
+1.3.1. 创建 `kether-net` 网络，查询网关 IP，填充 `test/http_https_echo_server.yml` 的 `network_list` 字段的 `*` 处，部署 `http-https-echo-server`。
 ```bash
 docker network create --driver bridge kether-net
 docker network inspect kether-net
-./bin/kether deploy -f test/http_https_echo.yml
+./bin/kether deploy -f test/http_https_echo_server.yml
 ```
 1.3.2. 在主机 8443 端口访问 HTTPS 服务。
 ```bash
 curl -k -X PUT -H "Arbitrary:Header" -d aaa=bbb https://localhost:8443/hello-world
 ```
-1.3.3. 构建 `http-echo-client` 镜像，启动容器并连接 `kether-net` 网络，进入容器。
+1.3.3. 构建 `http-echo-client` 镜像，填充 `test/http_echo_client.yml` 的 `network_list` 和 `volume_list` 字段的 `*` 处，部署 `http-echo-client`。
 ```bash
 cd test/http_echo_client
-docker build -t http-echo-client:testing .
-docker run -dit --name Http-Echo-Client --network kether-net http-echo-client:testing
-docker attach Http-Echo-Client
+docker build -t kofclubs/http-echo-client:testing .
+cd ../..
+./bin/kether deploy -f test/http_echo_client.yml
 ```
-1.3.4. 在 `Http-Echo-Client` 内部访问 HTTP 服务。
+1.3.4. 打开 `test/http_echo_client.yml` 的 `volume_list` 字段指定的主机文件，验证文件 I/O。
 ```bash
-python3 /app/client.py
-exit
+cat /*/response.txt
 ```
 
 1.4. 清理产物。
 ```bash
-cd ../..
 make clean
 ```
 
