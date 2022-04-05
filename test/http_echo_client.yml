@@ -1,0 +1,12 @@
+name: http-echo-client
+kind: deploy
+predicate:
+  repository: kofclubs/http-echo-client
+  tag: testing
+requirement:
+  local_image: true
+  detach: true
+  network_list:
+    - kether-net:172.*.0.1
+  volume_list:
+    - /*/response.txt:/app/response.txt

@@ -55,13 +55,16 @@ func Deploy(ctx context.Context, ketherObject *KetherObject, ketherObjectState *
 		return nil
 	}
 
-	err = container.PullDockerImage(ctx, imageName)
-	if err != nil {
-		log.Error("fail to pull docker image", "imageName", imageName, "err", err)
-		ketherObjectState.SetState(ctx, FAIL_TO_DEPLOY)
-		return err
+	if !ketherObject.Requirement.LocalImage {
+		log.Info("docker image will be pulled from remote repository", "imageName", imageName)
+		err = container.PullDockerImage(ctx, imageName)
+		if err != nil {
+			log.Error("fail to pull docker image", "imageName", imageName, "err", err)
+			ketherObjectState.SetState(ctx, FAIL_TO_DEPLOY)
+			return err
+		}
+		log.Info("docker image pulled")
 	}
-	log.Info("docker image pulled")
 
 	id, err := container.CreateDockerContainer(ctx, containerConfig, hostConfig, networkingConfig, ketherObject.Name)
 	if id == "" {
