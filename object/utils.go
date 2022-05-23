@@ -46,6 +46,8 @@ type RunDescriptionEntity struct {
 	NetworkList []string `yaml:"network_list"`
 	PublishList []string `yaml:"publish_list"`
 	VolumeList  []string `yaml:"volume_list"`
+	Cmd         []string `yaml:"cmd"`
+	Entrypoint  []string `yaml:"entrypoint"`
 }
 
 type KetherObjectEntity struct {
@@ -103,6 +105,8 @@ func (ketherObjectEntity *KetherObjectEntity) GetKetherObject() *KetherObject {
 			NetworkList: ketherObjectEntity.Requirement.NetworkList,
 			PublishList: ketherObjectEntity.Requirement.PublishList,
 			VolumeList:  ketherObjectEntity.Requirement.VolumeList,
+			Cmd:         ketherObjectEntity.Requirement.Cmd,
+			Entrypoint:  ketherObjectEntity.Requirement.Entrypoint,
 		},
 	}
 }
@@ -222,6 +226,8 @@ func (ketherObject *KetherObject) GetContainerAndHostConfig() (*container.Config
 	containerConfig := &container.Config{
 		Image:        ketherObject.GetImageName(),
 		ExposedPorts: exposedPorts,
+		Cmd:          ketherObject.Requirement.Cmd,
+		Entrypoint:   ketherObject.Requirement.Entrypoint,
 	}
 	hostConfig := &container.HostConfig{
 		PortBindings: portBindings,
